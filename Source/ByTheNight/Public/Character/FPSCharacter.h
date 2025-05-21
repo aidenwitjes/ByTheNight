@@ -8,6 +8,9 @@
 #include "GameFramework/Character.h"
 #include "FPSCharacter.generated.h"
 
+class UGameHUDWidget;
+class ALantern;
+
 UCLASS()
 class BYTHENIGHT_API AFPSCharacter : public ACharacter
 {
@@ -27,6 +30,50 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	float SprintSpeed = 600.0f;
+
+	// Stamina values
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float StaminaPercent = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float StaminaDrainRate = 0.20f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float StaminaRechargeRate = 0.10f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stamina")
+	float StaminaRechargeDelay = 2.0f;
+
+	float TimeSinceSprintEnd = 0.0f;
+
+	bool bIsSprinting = false;
+
+	// Lantern Blueprint class
+	UPROPERTY(EditDefaultsOnly, Category = "Lantern")
+	TSubclassOf<ALantern> LanternClass;
+
+	// Lantern instance
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Lantern")
+	ALantern* Lantern;
+
+	// Lantern anchor scene component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Lantern")
+	USceneComponent* LanternAnchor;
+
+	// Editable offset from camera to place lantern
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lantern")
+	FVector LanternAnchorOffset = FVector(50.f, 20.f, -10.f);
+
+	// Editable rotation relative to camera
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lantern")
+	FRotator LanternAnchorRotation = FRotator::ZeroRotator;
+
+	// Gameplay values
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
+	int32 CurrentSheepCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
+	int32 MaxSheepCount = 10;
 
 public:	
 	// Called every frame

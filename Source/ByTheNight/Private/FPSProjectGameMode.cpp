@@ -2,6 +2,9 @@
 
 
 #include "FPSProjectGameMode.h"
+#include "Blueprint/UserWidget.h"
+#include "UGameHUDWidget.h"
+#include "UObject/ConstructorHelpers.h"
 
 void AFPSProjectGameMode::StartPlay()
 {
@@ -23,4 +26,22 @@ void AFPSProjectGameMode::StartPlay()
 
 	// 4. Modern way of debugging values
 	// UE_LOGFMT(LogTemp, Warning, "TestNumber: {0}, Name: {1}, BoolTest: {2}", TestNumber, Name, BoolTest);
+	
+	// Create and display HUD widget
+	if (HUDWidgetClass)
+	{
+		HUDWidget = Cast<UGameHUDWidget>(CreateWidget(GetWorld(), HUDWidgetClass));
+		if (HUDWidgetClass)
+		{
+			HUDWidget = CreateWidget<UGameHUDWidget>(GetWorld(), HUDWidgetClass);
+			if (HUDWidget)
+			{
+				HUDWidget->AddToViewport();
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("HUDWidgetClass not set in GameMode!"));
+		}
+	}
 }

@@ -7,13 +7,26 @@
 #include "Logging/StructuredLog.h"
 #include "FPSProjectGameMode.generated.h"
 
-/**
- * 
- */
+class UGameHUDWidget;
+
 UCLASS()
 class BYTHENIGHT_API AFPSProjectGameMode : public AGameModeBase
 {
-	GENERATED_BODY()
-	
-	virtual void StartPlay() override;
+    GENERATED_BODY()
+
+protected:
+    virtual void StartPlay() override;
+
+    // Assign this in the editor to your UGameHUDWidget Blueprint class
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UGameHUDWidget> HUDWidgetClass;
+
+private:
+    // Instance of the widget
+    UPROPERTY()
+    UGameHUDWidget* HUDWidget;
+
+public:
+    // Public getter for HUDWidget
+    UGameHUDWidget* GetHUDWidget() const { return HUDWidget; }
 };
