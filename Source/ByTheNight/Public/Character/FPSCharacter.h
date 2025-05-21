@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "FPSCharacter.generated.h"
@@ -21,10 +23,10 @@ protected:
 
 	// Base movement speeds
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	float WalkSpeed = 600.0f;
+	float WalkSpeed = 400.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	float SprintSpeed = 1200.0f;
+	float SprintSpeed = 600.0f;
 
 public:	
 	// Called every frame
@@ -32,6 +34,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UPROPERTY(VisibleAnywhere)
+	UCameraComponent* FPSCameraComponent;
 
 	// Forward movement
 	UFUNCTION()
