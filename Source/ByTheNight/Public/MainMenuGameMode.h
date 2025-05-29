@@ -12,7 +12,7 @@ class BYTHENIGHT_API AMainMenuGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 protected:
-	virtual void BeginPlay() override;
+	virtual void StartPlay() override;
 
 	// Widget class to use for the main menu UI
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")

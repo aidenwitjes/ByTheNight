@@ -36,6 +36,12 @@ void ALantern::DrainFuel(float DeltaTime)
     Fuel -= FuelDrainRate * DeltaTime;
     Fuel = FMath::Clamp(Fuel, 0.0f, MaxFuel);
     UpdateLightState();
+
+    if (Fuel <= 0.0f && !bHasTriggeredFuelDepletion)
+    {
+        bHasTriggeredFuelDepletion = true;
+        OnFuelDepletedDelegate.Broadcast(); // ?? Fire the event
+    }
 }
 
 void ALantern::RefillByPercent(float Percent)

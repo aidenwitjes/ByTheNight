@@ -2,9 +2,9 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h"
 
-void AMainMenuGameMode::BeginPlay()
+void AMainMenuGameMode::StartPlay()
 {
-	Super::BeginPlay();
+	Super::StartPlay();
 
 	if (MainMenuWidgetClass)
 	{

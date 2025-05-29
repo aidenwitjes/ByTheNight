@@ -1,15 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
-
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "FPSCharacter.generated.h"
 
-class UGameHUDWidget;
 class ALantern;
+class ASheep;
+class UGameHUDWidget;
+class UPauseMenuWidget;
 
 UCLASS()
 class BYTHENIGHT_API AFPSCharacter : public ACharacter
@@ -23,6 +23,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	// Base movement speeds
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
@@ -45,7 +48,6 @@ protected:
 	float StaminaRechargeDelay = 2.0f;
 
 	float TimeSinceSprintEnd = 0.0f;
-
 	bool bIsSprinting = false;
 
 	// Lantern Blueprint class
@@ -73,14 +75,18 @@ protected:
 	int32 CurrentSheepCount = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
-	int32 MaxSheepCount = 10;
+	int32 MaxSheepCount = 6;
 
-public:	
+	// Pause Menu
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UPauseMenuWidget> PauseMenuWidgetClass;
+
+	UPROPERTY()
+	UPauseMenuWidget* PauseMenuWidget;
+
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* FPSCameraComponent;
@@ -110,4 +116,12 @@ public:
 	// Interact action
 	UFUNCTION()
 	void Interact();
+
+	// Check for interactables in crosshair
+	UFUNCTION()
+	void CheckForInteractables();
+
+	// Pause functionality
+	UFUNCTION()
+	void TogglePause();
 };

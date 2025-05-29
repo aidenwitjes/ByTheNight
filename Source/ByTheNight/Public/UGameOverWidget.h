@@ -2,12 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "UMainMenuWidget.generated.h"
+#include "UGameOverWidget.generated.h"
 
 class UButton;
 
 UCLASS()
-class BYTHENIGHT_API UMainMenuWidget : public UUserWidget
+class BYTHENIGHT_API UGameOverWidget : public UUserWidget
 {
     GENERATED_BODY()
 
@@ -15,15 +15,21 @@ protected:
     virtual void NativeOnInitialized() override;
 
     UFUNCTION()
-    void OnPlayClicked();
+    void OnReturnToMenuClicked();
 
     UFUNCTION()
     void OnQuitClicked();
 
+    UFUNCTION()
+    void OnRestartClicked();
+
     // Exposing buttons for Blueprints binding
     UPROPERTY(meta = (BindWidget))
-    UButton* PlayButton;
+    UButton* ReturnToMenuButton;
 
     UPROPERTY(meta = (BindWidget))
     UButton* QuitButton;
+
+    UPROPERTY(meta = (BindWidget))
+    UButton* RestartButton;
 };

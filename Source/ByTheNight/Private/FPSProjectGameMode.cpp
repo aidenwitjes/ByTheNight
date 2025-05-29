@@ -5,6 +5,11 @@
 #include "Blueprint/UserWidget.h"
 #include "UGameHUDWidget.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/PlayerController.h"
+#include "CharacterObjects/Lantern.h"
 
 void AFPSProjectGameMode::StartPlay()
 {
@@ -26,7 +31,7 @@ void AFPSProjectGameMode::StartPlay()
 
 	// 4. Modern way of debugging values
 	// UE_LOGFMT(LogTemp, Warning, "TestNumber: {0}, Name: {1}, BoolTest: {2}", TestNumber, Name, BoolTest);
-	
+
 	// Create and display HUD widget
 	if (HUDWidgetClass)
 	{
@@ -44,4 +49,31 @@ void AFPSProjectGameMode::StartPlay()
 			UE_LOG(LogTemp, Warning, TEXT("HUDWidgetClass not set in GameMode!"));
 		}
 	}
+	// Find lantern and bind to delegate
+	ALantern* Lantern = Cast<ALantern>(UGameplayStatics::GetActorOfClass(this, ALantern::StaticClass()));
+	if (Lantern)
+	{
+		Lantern->OnFuelDepletedDelegate.AddDynamic(this, &AFPSProjectGameMode::HandleLanternFuelDepleted);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Lantern not found in scene!"));
+	}
 }
+	void AFPSProjectGameMode::HandleLanternFuelDepleted()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Lantern fuel depleted! Triggering end scene..."));
+
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC && PC->PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->StartCameraFade(0.f, 1.f, 1.0f, FLinearColor::Black, false, true);
+
+			// Delay 1 second then trigger end scene
+			FTimerHandle FadeTimerHandle;
+			GetWorld()->GetTimerManager().SetTimer(FadeTimerHandle, [this]()
+				{
+					UGameplayStatics::OpenLevel(this, "GameOver");
+				}, 2.0f, false);
+		}
+	}

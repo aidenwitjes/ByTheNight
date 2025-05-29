@@ -1,17 +1,20 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/FPSCharacter.h"
 #include "FPSProjectGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CharacterObjects/Lantern.h"
 #include "Kismet/GameplayStatics.h"
+#include "AnimalNPC/Sheep.h"
 #include "UGameHUDWidget.h"
+#include "UPauseMenuWidget.h"
+#include "DrawDebugHelpers.h"
+#include "Blueprint/UserWidget.h"
 
 // Sets default values
 AFPSCharacter::AFPSCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	if (!FPSCameraComponent) {
@@ -31,7 +34,7 @@ AFPSCharacter::AFPSCharacter()
 void AFPSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	// Set initial walk speed
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 
@@ -61,10 +64,19 @@ void AFPSCharacter::BeginPlay()
 void AFPSCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
+	// Don't update gameplay logic if paused
+	if (UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		return;
+	}
+
 	// Display data for movement speed (testing sprinting logic)
 	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("Speed: %f"), GetCharacterMovement()->Velocity.Size()));
-	
+
+	// Check for interactables in crosshair and display UI feedback
+	CheckForInteractables();
+
 	// Update HUD widget with current values
 	if (GetWorld())
 	{
@@ -118,7 +130,7 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	// Movement
 	PlayerInputComponent->BindAxis("MoveForward", this, &AFPSCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AFPSCharacter::MoveRight);
-	
+
 	// Look
 	PlayerInputComponent->BindAxis("LookHorizontal", this, &AFPSCharacter::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookVertical", this, &AFPSCharacter::AddControllerPitchInput);
@@ -134,26 +146,34 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	// Interact
 	PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AFPSCharacter::Interact);
 
+	// Pause
+	PlayerInputComponent->BindAction("Pause", IE_Pressed, this, &AFPSCharacter::TogglePause);
 }
 
 void AFPSCharacter::MoveForward(float value)
 {
-	// 1. Unreal tutorial way
-	// FVector Direction = FRotationMatrix(Controller->GetControlRotation()).GetScaledAxis(EAxis::X);
-
-	FVector Direction = GetActorForwardVector();
-	AddMovementInput(Direction, value);
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		FVector Direction = GetActorForwardVector();
+		AddMovementInput(Direction, value);
+	}
 }
 
 void AFPSCharacter::MoveRight(float value)
 {
-	FVector Direction = GetActorRightVector();
-	AddMovementInput(Direction, value);
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		FVector Direction = GetActorRightVector();
+		AddMovementInput(Direction, value);
+	}
 }
 
 void AFPSCharacter::StartJump()
 {
-	bPressedJump = true;
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
+	{
+		bPressedJump = true;
+	}
 }
 
 void AFPSCharacter::EndJump()
@@ -163,13 +183,15 @@ void AFPSCharacter::EndJump()
 
 void AFPSCharacter::StartSprinting()
 {
-	// Only sprint if stamina available
-	if (StaminaPercent > 0.0f)
+	if (!UGameplayStatics::IsGamePaused(GetWorld()))
 	{
-		bIsSprinting = true;
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
-		// Reset delay timer since sprint started
-		TimeSinceSprintEnd = 0.0f;
+		// Only sprint if stamina available
+		if (StaminaPercent > 0.0f)
+		{
+			bIsSprinting = true;
+			GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+			TimeSinceSprintEnd = 0.0f;
+		}
 	}
 }
 
@@ -183,8 +205,124 @@ void AFPSCharacter::StopSprinting()
 
 void AFPSCharacter::Interact()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Interact Button Pressed!"));
+	if (UGameplayStatics::IsGamePaused(GetWorld())) return;
+
+	// Raycast from camera to detect sheep
+	FVector Start = FPSCameraComponent->GetComponentLocation();
+	FVector End = Start + (FPSCameraComponent->GetForwardVector() * 300.0f); // 300 units in front
+
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(this); // Ignore self
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
+
+	if (bHit)
+	{
+		AActor* HitActor = HitResult.GetActor();
+		if (HitActor)
+		{
+			// Check if hit actor is a sheep
+			ASheep* Sheep = Cast<ASheep>(HitActor);
+			if (Sheep)
+			{
+				Sheep->Interact(this);
+				CurrentSheepCount++;
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, TEXT("Collected sheep!"));
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Looking at something that's not a sheep."));
+			}
+		}
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Nothing in crosshair to interact with."));
+	}
 }
 
+void AFPSCharacter::CheckForInteractables()
+{
+	if (UGameplayStatics::IsGamePaused(GetWorld())) return;
 
+	// Raycast from camera to detect interactables
+	FVector Start = FPSCameraComponent->GetComponentLocation();
+	FVector End = Start + (FPSCameraComponent->GetForwardVector() * 300.0f); // 300 units in front
 
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(this); // Ignore self
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
+
+	if (bHit)
+	{
+		AActor* HitActor = HitResult.GetActor();
+		if (HitActor)
+		{
+			// Check if hit actor is a sheep
+			ASheep* Sheep = Cast<ASheep>(HitActor);
+			if (Sheep)
+			{
+				// Draw debug box around the sheep
+				FVector SheepLocation = Sheep->GetActorLocation();
+				FVector BoxExtent = FVector(50.f, 50.f, 50.f); // Adjust size as needed
+
+				DrawDebugBox(GetWorld(), SheepLocation, BoxExtent, FColor::Yellow, false, 0.1f, 0, 2.0f);
+
+				// Display interaction prompt
+				GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Yellow, TEXT("Press [E] to collect sheep"));
+			}
+		}
+	}
+}
+
+void AFPSCharacter::TogglePause()
+{
+	bool bCurrentlyPaused = UGameplayStatics::IsGamePaused(GetWorld());
+
+	if (bCurrentlyPaused)
+	{
+		// Resume game
+		UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			PC->SetInputMode(FInputModeGameOnly());
+			PC->bShowMouseCursor = false;
+		}
+
+		// Just hide the widget instead of removing/destroying it
+		if (PauseMenuWidget)
+		{
+			PauseMenuWidget->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+	else
+	{
+		// Pause game
+		UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+		{
+			PC->SetInputMode(FInputModeUIOnly());
+			PC->bShowMouseCursor = true;
+		}
+
+		// Create the widget if it doesn't exist
+		if (!PauseMenuWidget && PauseMenuWidgetClass)
+		{
+			PauseMenuWidget = CreateWidget<UPauseMenuWidget>(GetWorld(), PauseMenuWidgetClass);
+			if (PauseMenuWidget)
+			{
+				PauseMenuWidget->AddToViewport();
+			}
+		}
+		else if (PauseMenuWidget)
+		{
+			// Just show it again if it's already created
+			PauseMenuWidget->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
+}

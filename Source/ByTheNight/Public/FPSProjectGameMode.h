@@ -29,4 +29,7 @@ private:
 public:
     // Public getter for HUDWidget
     UGameHUDWidget* GetHUDWidget() const { return HUDWidget; }
+
+    UFUNCTION()
+    void HandleLanternFuelDepleted();
 };
