@@ -1,14 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Character/FPSCharacter.h"
+#include "InteractionManager.h"
 #include "FPSProjectGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CharacterObjects/Lantern.h"
 #include "Kismet/GameplayStatics.h"
-#include "AnimalNPC/Sheep.h"
 #include "UGameHUDWidget.h"
 #include "UPauseMenuWidget.h"
-#include "DrawDebugHelpers.h"
 #include "Blueprint/UserWidget.h"
 
 // Sets default values
@@ -28,6 +27,9 @@ AFPSCharacter::AFPSCharacter()
 	LanternAnchor->SetupAttachment(FPSCameraComponent);
 	LanternAnchor->SetRelativeLocation(LanternAnchorOffset);
 	LanternAnchor->SetRelativeRotation(LanternAnchorRotation);
+
+	// Create the Interaction Manager component
+	InteractionManager = CreateDefaultSubobject<UInteractionManager>(TEXT("InteractionManager"));
 }
 
 // Called when the game starts or when spawned
@@ -75,7 +77,10 @@ void AFPSCharacter::Tick(float DeltaTime)
 	GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, FString::Printf(TEXT("Speed: %f"), GetCharacterMovement()->Velocity.Size()));
 
 	// Check for interactables in crosshair and display UI feedback
-	CheckForInteractables();
+	if (InteractionManager)
+	{
+		InteractionManager->CheckForInteractables(this);
+	}
 
 	// Update HUD widget with current values
 	if (GetWorld())
@@ -93,6 +98,7 @@ void AFPSCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	// Stamina logic
 	if (bIsSprinting)
 	{
 		// Drain stamina
@@ -203,78 +209,13 @@ void AFPSCharacter::StopSprinting()
 	TimeSinceSprintEnd = 0.0f;
 }
 
+// Simplified Interact function - now delegates to InteractionManager
 void AFPSCharacter::Interact()
 {
-	if (UGameplayStatics::IsGamePaused(GetWorld())) return;
-
-	// Raycast from camera to detect sheep
-	FVector Start = FPSCameraComponent->GetComponentLocation();
-	FVector End = Start + (FPSCameraComponent->GetForwardVector() * 300.0f); // 300 units in front
-
-	FHitResult HitResult;
-	FCollisionQueryParams TraceParams;
-	TraceParams.AddIgnoredActor(this); // Ignore self
-
-	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
-
-	if (bHit)
+	if (InteractionManager)
 	{
-		AActor* HitActor = HitResult.GetActor();
-		if (HitActor)
-		{
-			// Check if hit actor is a sheep
-			ASheep* Sheep = Cast<ASheep>(HitActor);
-			if (Sheep)
-			{
-				Sheep->Interact(this);
-				CurrentSheepCount++;
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, TEXT("Collected sheep!"));
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Looking at something that's not a sheep."));
-			}
-		}
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Nothing in crosshair to interact with."));
-	}
-}
-
-void AFPSCharacter::CheckForInteractables()
-{
-	if (UGameplayStatics::IsGamePaused(GetWorld())) return;
-
-	// Raycast from camera to detect interactables
-	FVector Start = FPSCameraComponent->GetComponentLocation();
-	FVector End = Start + (FPSCameraComponent->GetForwardVector() * 300.0f); // 300 units in front
-
-	FHitResult HitResult;
-	FCollisionQueryParams TraceParams;
-	TraceParams.AddIgnoredActor(this); // Ignore self
-
-	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
-
-	if (bHit)
-	{
-		AActor* HitActor = HitResult.GetActor();
-		if (HitActor)
-		{
-			// Check if hit actor is a sheep
-			ASheep* Sheep = Cast<ASheep>(HitActor);
-			if (Sheep)
-			{
-				// Draw debug box around the sheep
-				FVector SheepLocation = Sheep->GetActorLocation();
-				FVector BoxExtent = FVector(50.f, 50.f, 50.f); // Adjust size as needed
-
-				DrawDebugBox(GetWorld(), SheepLocation, BoxExtent, FColor::Yellow, false, 0.1f, 0, 2.0f);
-
-				// Display interaction prompt
-				GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::Yellow, TEXT("Press [E] to collect sheep"));
-			}
-		}
+		AActor* Target = InteractionManager->GetCurrentInteractable();
+		InteractionManager->PerformInteraction(this, Target);
 	}
 }
 

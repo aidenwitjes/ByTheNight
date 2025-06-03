@@ -8,8 +8,10 @@
 
 class ALantern;
 class ASheep;
+class APickaxePickup;
 class UGameHUDWidget;
 class UPauseMenuWidget;
+class UInteractionManager;
 
 UCLASS()
 class BYTHENIGHT_API AFPSCharacter : public ACharacter
@@ -19,6 +21,39 @@ class BYTHENIGHT_API AFPSCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AFPSCharacter();
+
+	// Inventory logic
+	// Number of pickaxes the player has
+	UPROPERTY(BlueprintReadWrite, Category = "Inventory")
+	int32 PickaxeCount = 0;
+
+	// Optional helper
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool HasPickaxe() const { return PickaxeCount > 0; }
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UsePickaxe() { if (PickaxeCount > 0) PickaxeCount--; }
+
+	// Number of woodaxes the player has
+	UPROPERTY(BlueprintReadWrite, Category = "Inventory")
+	int32 WoodaxeCount = 0;
+
+	// Optional helper
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool HasWoodaxe() const { return WoodaxeCount > 0; }
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UseWoodaxe() { if (WoodaxeCount > 0) WoodaxeCount--; }
+
+	// Sheep Values
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	int32 CurrentSheepCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+	int32 MaxSheepCount = 6;
+
+	UPROPERTY(VisibleAnywhere)
+	UCameraComponent* FPSCameraComponent;
 
 protected:
 	// Called when the game starts or when spawned
@@ -70,13 +105,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lantern")
 	FRotator LanternAnchorRotation = FRotator::ZeroRotator;
 
-	// Gameplay values
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
-	int32 CurrentSheepCount = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
-	int32 MaxSheepCount = 6;
-
 	// Pause Menu
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UPauseMenuWidget> PauseMenuWidgetClass;
@@ -84,12 +112,13 @@ protected:
 	UPROPERTY()
 	UPauseMenuWidget* PauseMenuWidget;
 
+	// Interaction Manager Component
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	UInteractionManager* InteractionManager;
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	UPROPERTY(VisibleAnywhere)
-	UCameraComponent* FPSCameraComponent;
 
 	// Forward movement
 	UFUNCTION()
@@ -113,15 +142,15 @@ public:
 	UFUNCTION()
 	void StopSprinting();
 
-	// Interact action
+	// Interact action (now simplified)
 	UFUNCTION()
 	void Interact();
-
-	// Check for interactables in crosshair
-	UFUNCTION()
-	void CheckForInteractables();
 
 	// Pause functionality
 	UFUNCTION()
 	void TogglePause();
+
+	// Getter for interaction manager (for other systems that might need it)
+	UFUNCTION(BlueprintPure, Category = "Interaction")
+	UInteractionManager* GetInteractionManager() const { return InteractionManager; }
 };

@@ -4,14 +4,16 @@
 #include "GameFramework/Actor.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundCue.h"
+#include "IInteractable.h"
 #include "Sheep.generated.h"
 
 class UStaticMeshComponent;
 class UAudioComponent;
 class USoundCue;
+class AFPSCharacter;
 
 UCLASS()
-class BYTHENIGHT_API ASheep : public AActor
+class BYTHENIGHT_API ASheep : public AActor, public IInteractable
 {
     GENERATED_BODY()
 
@@ -20,7 +22,10 @@ public:
 
     virtual void BeginPlay() override;
 
-    void Interact(AActor* Interactor);
+    virtual void Interact_Implementation(AFPSCharacter* Player) override;
+    virtual FString GetInteractionPrompt_Implementation() const override;
+    virtual bool CanInteract_Implementation(AFPSCharacter* Player) const override;
+    virtual FLinearColor GetHighlightColor_Implementation() const override;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -49,6 +54,12 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio|Bleat Timing", meta = (ClampMin = "0.1", ClampMax = "60.0"))
     float MaxBleatDelay = 7.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+    FString InteractionPromptText = TEXT("Press [E] to collect sheep");
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+    FLinearColor HighlightColor = FLinearColor::Yellow;
 
 private:
     bool bIsCollected = false;

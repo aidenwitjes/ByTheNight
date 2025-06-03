@@ -5,13 +5,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+#include "Character/FPSCharacter.h"
 
 ASheep::ASheep()
 {
     PrimaryActorTick.bCanEverTick = false;
-
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-
     SheepMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SheepMesh"));
     SheepMesh->SetupAttachment(RootComponent);
     SheepMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -24,7 +23,6 @@ ASheep::ASheep()
     AmbientAudioComponent->bIsUISound = false;
     AmbientAudioComponent->bAllowSpatialization = true;
 
-    // Add slight spatial offset
     FVector RandomOffset(FMath::FRandRange(-20.f, 20.f), FMath::FRandRange(-20.f, 20.f), 0.f);
     AmbientAudioComponent->SetRelativeLocation(RandomOffset);
 }
@@ -43,13 +41,11 @@ void ASheep::BeginPlay()
     }
 }
 
-void ASheep::Interact(AActor* Interactor)
+void ASheep::Interact_Implementation(AFPSCharacter* Player)
 {
-    if (bIsCollected) return;
+    if (bIsCollected || !Player) return;
 
     bIsCollected = true;
-
-    UE_LOG(LogTemp, Log, TEXT("Sheep collected by %s!"), *Interactor->GetName());
 
     if (InteractionSound)
     {
@@ -65,12 +61,28 @@ void ASheep::Interact(AActor* Interactor)
 
     SheepMesh->SetVisibility(false);
     SetActorEnableCollision(false);
+
+    UE_LOG(LogTemp, Log, TEXT("Sheep collected through IInteractable interface by %s!"), *Player->GetName());
+}
+
+FString ASheep::GetInteractionPrompt_Implementation() const
+{
+    return bIsCollected ? TEXT("") : InteractionPromptText;
+}
+
+bool ASheep::CanInteract_Implementation(AFPSCharacter* Player) const
+{
+    return !bIsCollected && Player != nullptr;
+}
+
+FLinearColor ASheep::GetHighlightColor_Implementation() const
+{
+    return bIsCollected ? FLinearColor::Gray : HighlightColor;
 }
 
 void ASheep::ScheduleNextBleat()
 {
-    if (bIsCollected || !AmbientSheepSound)
-        return;
+    if (bIsCollected || !AmbientSheepSound) return;
 
     const float Delay = FMath::FRandRange(MinBleatDelay, MaxBleatDelay);
     GetWorld()->GetTimerManager().SetTimer(BleatTimerHandle, this, &ASheep::PlayRandomBleat, Delay, false);
@@ -78,8 +90,7 @@ void ASheep::ScheduleNextBleat()
 
 void ASheep::PlayRandomBleat()
 {
-    if (bIsCollected || !AmbientSheepSound || !AmbientAudioComponent)
-        return;
+    if (bIsCollected || !AmbientSheepSound || !AmbientAudioComponent) return;
 
     APawn* Player = GetPlayer();
     if (!Player) return;
